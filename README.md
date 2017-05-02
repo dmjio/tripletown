@@ -2,7 +2,7 @@
 Console-based version of [`TripleTown`](http://spryfox.com/our-games/tripletown/)
 
 ```bash
-[nix-shell:~/Desktop/tripletown]$ runhaskell Main.hs
+[nix-shell:~/Desktop/tripletown]$ cabal build && cabal run main
 Welcome to Triple Town Console!
 Please enter height and width of board (i.e. (10,10))
 (5,5)
