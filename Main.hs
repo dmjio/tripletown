@@ -177,8 +177,13 @@ runGame board = flip evalStateT board $ do
   fix $ \loop -> do
     (position, piece) <- getPosition
     insertIntoBoard position piece
-    neighbors <- getNeighbors piece position
-    updateBoard position piece neighbors
+    let reduceBoard p = do
+           neighbors <- getNeighbors p position
+           newPiece <- updateBoard position p neighbors
+           if null neighbors
+             then return ()
+             else reduceBoard newPiece
+    reduceBoard piece
     board <- get
     liftIO $ showBoard board
     if isFull board
@@ -197,13 +202,15 @@ deleteAll (x:xs) Board {..} =
   deleteAll xs $ Board { board = M.delete x board, .. }
 
 -- | Reduces board
-updateBoard :: Position -> Piece -> [Position] -> StateT Board IO ()
+updateBoard :: Position -> Piece -> [Position] -> StateT Board IO Piece
 updateBoard position piece positionsToRemove = do
   newBoard <- deleteAll positionsToRemove <$> get
-  when (length positionsToRemove > 3) $ do
+  let newPiece = upgradePiece piece
+  when (length positionsToRemove > 3) $
     put newBoard {
-      board = M.insert position (upgradePiece piece) (board newBoard)
+      board = M.insert position newPiece (board newBoard)
     }
+  pure newPiece
 
 isFull :: Board -> Bool
 isFull Board {..} =
