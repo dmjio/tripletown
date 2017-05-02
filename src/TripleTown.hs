@@ -41,8 +41,8 @@ type Width = Int
 
 printRow :: Board -> Int -> IO ()
 printRow Board {..} row = do
-  forM_ [1..width] $ \c ->
-    case M.lookup (row,c) board of
+  forM_ [1..width] $ \col ->
+    case M.lookup (col,row) board of
       Nothing -> putChar '-'
       Just piece -> putChar (showPiece piece)
   putChar '\n'
