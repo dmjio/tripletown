@@ -199,7 +199,6 @@ deleteAll (x:xs) Board {..} =
 -- | Reduces board
 updateBoard :: Position -> Piece -> [Position] -> StateT Board IO ()
 updateBoard position piece positionsToRemove = do
-  liftIO $ print positionsToRemove
   newBoard <- deleteAll positionsToRemove <$> get
   when (length positionsToRemove > 3) $ do
     put newBoard {
