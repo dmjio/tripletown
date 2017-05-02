@@ -102,7 +102,7 @@ pushStack pos = do
     nodesToVisit = push pos (nodesToVisit ns)
   }
 
--- | Retrieve all pieces of a path
+-- | Retrieve all positions for like-pieces in a path
 getNeighbors
   :: Monad m
   => Piece
