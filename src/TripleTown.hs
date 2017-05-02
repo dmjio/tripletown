@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards  #-}
-module Main where
+module TripleTown where
 
 import           Control.Monad
 import           Control.Monad.State
@@ -34,7 +34,7 @@ data Board = Board {
    , width :: Int
    , board :: M.Map Position Piece
    , reduceAt :: Int
-   } deriving Show
+   } deriving (Show, Eq)
 
 type Height = Int
 type Width = Int
@@ -246,11 +246,4 @@ createBoard = do
           | x < 0 || y < 0 ->
               putStrLn "Invalid board size" >> createBoard
           | otherwise -> pure (newBoard x y)
-
-main :: IO ()
-main = do
-  putStrLn "Welcome to Triple Town Console!"
-  board <- createBoard
-  showBoard board
-  runGame board
 
