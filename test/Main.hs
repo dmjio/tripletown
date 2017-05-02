@@ -12,12 +12,12 @@ main = hspec $ do
       inputBoard `shouldBe` expectedBoard
 
 inputBoard :: Board
-inputBoard = flip execState inputBoard $ do
+inputBoard = flip execState testBoard $ do
   insertIntoBoard (2,2) Grass
   reduceBoard (2,2) Grass
     where
-      inputBoard :: Board
-      inputBoard = Board 5 5 (M.fromList [
+      testBoard :: Board
+      testBoard = Board 5 5 (M.fromList [
           ( (1,1), Bush )
         , ( (1,2), Bush )
         , ( (2,1), Grass )
