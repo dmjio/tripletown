@@ -1,7 +1,6 @@
 # tripletown
 Console-based version of [`TripleTown`](http://spryfox.com/our-games/tripletown/)
 
-Play like:
 ```bash
 [nix-shell:~/Desktop/tripletown]$ runhaskell Main.hs
 Welcome to Triple Town Console!
@@ -12,8 +11,9 @@ Please enter height and width of board (i.e. (10,10))
 -----
 -----
 -----
+
 Got: Tree
-Please enter a position between from (1,1) to (5,5) (i.e. (1,2)) to place it
+Please enter a position between from (1,1) to (5,5) (i.e. (1,2)) to place it on the board
 (2,2)
 -----
 -T---
