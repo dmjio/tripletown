@@ -84,8 +84,8 @@ addNeighbor pos =
 
 addSeen :: Position -> State NeighborState ()
 addSeen pos = modify $ \ns -> ns {
-    seen = pos : seen ns
-  }
+  seen = pos : seen ns
+}
 
 emptyState :: NeighborState
 emptyState = (NS [] [] [])
@@ -120,8 +120,8 @@ getNeighbors piece pos = do
       forM_ pos $ \foundPos -> do
         let neighbors = pieces b (getNeighborPositions foundPos)
         forM_ neighbors $ \(pos', maybePiece) -> do
-          seen' <- gets seen
-          when (maybePiece == Just piece && pos' `notElem` seen') $ do
+          seen <- gets seen
+          when (maybePiece == Just piece && pos' `notElem` seen) $ do
             addSeen pos'
             pushStack pos'
             addNeighbor pos'
@@ -148,7 +148,7 @@ getPosition = do
   pos <- liftIO $ fix $ \loop -> do
     putStrLn $ "Got: " ++ show piece
     putStrLn $ "Please enter a position between from\
-     \ (1,1) to (" ++ show (h,h) ++ " (i.e. (1,2)) to place it on the board"
+     \ (1,1) to " ++ show (h,h) ++ " (i.e. (1,2)) to place it on the board"
     line <- getLine
     case readMaybe line :: Maybe (Int, Int) of
       Nothing -> do
@@ -185,11 +185,12 @@ runGame board = flip evalStateT board $ do
     insertIntoBoard position piece
     let reduceBoard p = do
            neighbors <- getNeighbors p position
-           newPiece <- updateBoard position p neighbors
-           newNeighbors <- getNeighbors newPiece position
-           if null newNeighbors
-             then return ()
-             else reduceBoard newPiece
+           wasReduced <- updateBoard position p neighbors
+           forM_ wasReduced $ \newPiece -> do
+             newNeighbors <- getNeighbors newPiece position
+             if traceShow newNeighbors (null newNeighbors)
+               then return ()
+               else reduceBoard newPiece
     reduceBoard piece
     board <- get
     liftIO $ showBoard board
@@ -209,16 +210,24 @@ deleteAll (x:xs) Board {..} =
   deleteAll xs $ Board { board = M.delete x board, .. }
 
 -- | Reduces board
-updateBoard :: Position -> Piece -> [Position] -> StateT Board IO Piece
+updateBoard
+  :: Monad m
+  => Position
+  -> Piece
+  -> [Position]
+  -> StateT Board m (Maybe Piece)
 updateBoard position piece positionsToRemove = do
   reductionCount <- gets reduceAt
   newBoard <- deleteAll positionsToRemove <$> get
   let newPiece = upgradePiece piece
-  when (length positionsToRemove >= reductionCount) $
-    put newBoard {
-      board = M.insert position newPiece (board newBoard)
-    }
-  pure newPiece
+  if length positionsToRemove >= reductionCount
+    then do
+      put newBoard {
+        board = M.insert position newPiece (board newBoard)
+      }
+      pure (Just newPiece)
+    else
+      pure Nothing
 
 isFull :: Board -> Bool
 isFull Board {..} =
