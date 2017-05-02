@@ -165,7 +165,6 @@ getPosition = do
               Just _ -> do
                 putStrLn "Position already taken"
                 loop
-
   return (pos, piece)
 
 insertIntoBoard
@@ -178,20 +177,20 @@ insertIntoBoard position piece = do
     board = M.insert position piece (board b)
   }
 
+reduceBoard :: Monad m => Position -> Piece -> StateT Board m ()
+reduceBoard position piece = do
+  neighbors <- getNeighbors piece position
+  wasReduced <- updateBoard position piece neighbors
+  forM_ wasReduced $ \newPiece -> do
+    newNeighbors <- getNeighbors newPiece position
+    unless (null newNeighbors) (reduceBoard position newPiece)
+
 runGame :: Board -> IO ()
 runGame board = flip evalStateT board $ do
   fix $ \loop -> do
     (position, piece) <- getPosition
     insertIntoBoard position piece
-    let reduceBoard p = do
-           neighbors <- getNeighbors p position
-           wasReduced <- updateBoard position p neighbors
-           forM_ wasReduced $ \newPiece -> do
-             newNeighbors <- getNeighbors newPiece position
-             if traceShow newNeighbors (null newNeighbors)
-               then return ()
-               else reduceBoard newPiece
-    reduceBoard piece
+    reduceBoard position piece
     board <- get
     liftIO $ showBoard board
     if isFull board
