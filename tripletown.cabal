@@ -1,0 +1,18 @@
+name:                tripletown
+version:             0.1.0.0
+synopsis:            A console-based version of http://spryfox.com/our-games/tripletown/
+homepage:            https://github.com/tripletown/dmjio
+license:             BSD3
+license-file:        LICENSE
+author:              David Johnson
+maintainer:          djohnson.m@gmail.com
+category:            Game
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+executable tripletown
+  main-is:             Main.hs
+  other-extensions:    FlexibleContexts, RecordWildCards
+  build-depends:       base, containers, mtl, transformers, random
+  default-language:    Haskell2010
