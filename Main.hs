@@ -180,7 +180,8 @@ runGame board = flip evalStateT board $ do
     let reduceBoard p = do
            neighbors <- getNeighbors p position
            newPiece <- updateBoard position p neighbors
-           if null neighbors
+           newNeighbors <- getNeighbors newPiece position
+           if null newNeighbors
              then return ()
              else reduceBoard newPiece
     reduceBoard piece
