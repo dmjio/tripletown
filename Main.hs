@@ -33,6 +33,7 @@ data Board = Board {
      height :: Int
    , width :: Int
    , board :: M.Map Position Piece
+   , reduceAt :: Int
    } deriving Show
 
 type Height = Int
@@ -52,7 +53,7 @@ showBoard b@Board {..} =
 
 newBoard :: Int -> Int -> Board
 newBoard height width =
-  Board { board = mempty, ..}
+  Board { board = mempty, reduceAt = 3, ..}
 
 placePiece :: Piece -> Position -> Board -> Board
 placePiece piece position existingBoard =
@@ -136,31 +137,36 @@ getNeighborPositions (x,y) =
 
 pieces :: Board -> [Position] -> [(Position, Maybe Piece)]
 pieces Board{..} positions =
-  zip positions $
-    map (flip M.lookup board) positions
+  zip positions $ map (flip M.lookup board) positions
 
 getPosition :: StateT Board IO (Position, Piece)
 getPosition = do
- h <- gets height
- w <- gets width
- piece <- getPiece
- pos <- liftIO $ fix $ \loop -> do
-  putStrLn $ "Got: " ++ show piece
-  putStrLn $ "Please enter a position between from\
-   \ (1,1) to (" ++ show (h,h) ++ " (i.e. (1,2)) to place it"
-  line <- getLine
-  case readMaybe line :: Maybe (Int, Int) of
-    Nothing -> do
-      putStrLn "Parse error, please try again"
-      loop
-    Just (x,y) ->
-      if x > w || y > h || x < 1 || y < 1
-        then do
-          putStrLn "Out of range, please try again"
-          loop
-        else
-          pure (x,y)
- return (pos, piece)
+  b <- gets board
+  h <- gets height
+  w <- gets width
+  piece <- getPiece
+  pos <- liftIO $ fix $ \loop -> do
+    putStrLn $ "Got: " ++ show piece
+    putStrLn $ "Please enter a position between from\
+     \ (1,1) to (" ++ show (h,h) ++ " (i.e. (1,2)) to place it on the board"
+    line <- getLine
+    case readMaybe line :: Maybe (Int, Int) of
+      Nothing -> do
+        putStrLn "Parse error, please try again"
+        loop
+      Just (x,y) ->
+        if x > w || y > h || x < 1 || y < 1
+          then do
+            putStrLn "Out of range, please try again"
+            loop
+          else
+            case M.lookup (x,y) b of
+              Nothing -> pure (x,y)
+              Just _ -> do
+                putStrLn "Position already taken"
+                loop
+
+  return (pos, piece)
 
 insertIntoBoard
   :: MonadState Board m
@@ -205,9 +211,10 @@ deleteAll (x:xs) Board {..} =
 -- | Reduces board
 updateBoard :: Position -> Piece -> [Position] -> StateT Board IO Piece
 updateBoard position piece positionsToRemove = do
+  reductionCount <- gets reduceAt
   newBoard <- deleteAll positionsToRemove <$> get
   let newPiece = upgradePiece piece
-  when (length positionsToRemove > 3) $
+  when (length positionsToRemove >= reductionCount) $
     put newBoard {
       board = M.insert position newPiece (board newBoard)
     }
