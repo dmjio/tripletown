@@ -55,12 +55,6 @@ newBoard :: Int -> Int -> Board
 newBoard height width =
   Board { board = mempty, reduceAt = 3, ..}
 
-placePiece :: Piece -> Position -> Board -> Board
-placePiece piece position existingBoard =
-  existingBoard {
-    board = M.insert position piece (board existingBoard)
-  }
-
 type Stack a = [a]
 
 push :: a -> Stack a -> Stack a
