@@ -60,12 +60,6 @@ newBoard height width =
 defaultBoard :: Board
 defaultBoard = newBoard Nothing Nothing
 
-placePiece :: Piece -> Position -> Board -> Board
-placePiece piece position existingBoard =
-  existingBoard {
-    board = M.insert position piece (board existingBoard)
-  }
-
 type Stack a = [a]
 
 push :: a -> Stack a -> Stack a
