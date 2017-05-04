@@ -192,7 +192,7 @@ reduceBoard position piece = do
     newNeighbors <- getNeighbors newPiece position
     unless (null newNeighbors) (reduceBoard position newPiece)
 
-runGame :: Board -> IO ()
+runGame :: Board -> IO Bool
 runGame board = flip evalStateT board $ do
   fix $ \loop -> do
     (position, piece) <- getPosition
@@ -201,7 +201,11 @@ runGame board = flip evalStateT board $ do
     board <- get
     liftIO $ showBoard board
     if isFull board
-      then liftIO $ putStrLn "Game over!"
+      then do
+        liftIO $ do
+          putStrLn "Game over!"
+          putStrLn "Play again? (y/n)"
+          (=='y') <$> getChar
       else loop
 
 upgradePiece :: Piece -> Piece
