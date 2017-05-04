@@ -7,6 +7,7 @@ import           Control.Monad.State
 import           Data.Char
 import           Data.List
 import qualified Data.Map            as M
+import           Data.Maybe
 import           Debug.Trace         (traceShow)
 import           System.Random
 import           Text.Read           (readMaybe)
@@ -30,30 +31,34 @@ getPiece = liftIO $ toEnum <$> randomRIO (0,2)
 type Position = (Int, Int)
 
 data Board = Board {
-     height :: Int
-   , width :: Int
-   , board :: M.Map Position Piece
+     height   :: Int
+   , width    :: Int
+   , board    :: M.Map Position Piece
    , reduceAt :: Int
    } deriving (Show, Eq)
 
 type Height = Int
 type Width = Int
 
-printRow :: Board -> Int -> IO ()
-printRow Board {..} row = do
-  forM_ [1..width] $ \col ->
-    case M.lookup (col,row) board of
-      Nothing -> putChar '-'
-      Just piece -> putChar (showPiece piece)
-  putChar '\n'
-
 showBoard :: Board -> IO ()
 showBoard b@Board {..} =
-  forM_ [1..height] (printRow b)
+  forM_ [1..height] $ \y -> do
+    forM_ [1..width] $ \x -> do
+      case M.lookup (x, y) board of
+        Nothing -> putChar '-'
+        Just piece -> putChar (showPiece piece)
+    putChar '\n'
 
-newBoard :: Int -> Int -> Board
+newBoard :: Maybe Int -> Maybe Int -> Board
 newBoard height width =
-  Board { board = mempty, reduceAt = 3, ..}
+  Board { board = mempty
+        , reduceAt = 3
+        , height = fromMaybe 6 height
+        , width = fromMaybe 6 width
+        }
+
+defaultBoard :: Board
+defaultBoard = newBoard Nothing Nothing
 
 placePiece :: Piece -> Position -> Board -> Board
 placePiece piece position existingBoard =
@@ -72,8 +77,8 @@ pop (x:xs) = (Just x, xs)
 
 data NeighborState = NS {
    nodesToVisit :: Stack Position
- , neighbors :: [Position]
- , seen :: [Position]
+ , neighbors    :: [Position]
+ , seen         :: [Position]
  } deriving (Show)
 
 addNeighbor :: Position -> State NeighborState ()
@@ -88,13 +93,13 @@ addSeen pos = modify $ \ns -> ns {
 }
 
 emptyState :: NeighborState
-emptyState = (NS [] [] [])
+emptyState = NS [] [] []
 
 popStack :: State NeighborState (Maybe Position)
 popStack = do
   ns <- get
   let (pos, newStack) = pop (nodesToVisit ns)
-  put $ ns { nodesToVisit = newStack }
+  put ns { nodesToVisit = newStack }
   return pos
 
 pushStack :: Position -> State NeighborState ()
@@ -105,27 +110,29 @@ pushStack pos = do
 
 -- | Retrieve all positions for like-pieces in a path
 getNeighbors
-  :: Monad m
+  :: MonadState Board m
   => Piece
   -> Position
-  -> StateT Board m [Position]
-getNeighbors piece pos = do
- b <- get
- pure $ neighbors $ execState (go b) emptyState {
-   nodesToVisit = [pos]
+  -> m [Position]
+getNeighbors piece position = do
+ let newState = emptyState {
+   nodesToVisit = [position]
  , neighbors = []
- } where
-    go b = do
-      pos <- popStack
-      forM_ pos $ \foundPos -> do
-        let neighbors = pieces b (getNeighborPositions foundPos)
-        forM_ neighbors $ \(pos', maybePiece) -> do
+ }
+ board <- get
+ pure $ neighbors $ execState (go board) newState
+  where
+    go board = fix $ \loop -> do
+      position <- popStack
+      forM_ position $ \currentPosition -> do
+        let neighbors = withPieces board (getNeighborPositions currentPosition)
+        forM_ neighbors $ \(neighborPosition, neighborPiece) -> do
           seen <- gets seen
-          when (maybePiece == Just piece && pos' `notElem` seen) $ do
-            addSeen pos'
-            pushStack pos'
-            addNeighbor pos'
-        go b
+          when (neighborPiece == piece && neighborPosition `notElem` seen) $ do
+            addSeen neighborPosition
+            pushStack neighborPosition
+            addNeighbor neighborPosition
+        loop
 
 getNeighborPositions :: Position -> [Position]
 getNeighborPositions (x,y) =
@@ -135,32 +142,34 @@ getNeighborPositions (x,y) =
   , (x, y - 1)
   ]
 
-pieces :: Board -> [Position] -> [(Position, Maybe Piece)]
-pieces Board{..} positions =
-  zip positions $ map (flip M.lookup board) positions
+withPieces :: Board -> [Position] -> [(Position, Piece)]
+withPieces Board{..} positions =
+  [ (x,y)
+  | (x, Just y) <-
+      zip positions .
+      map (flip M.lookup board) $ positions
+  ]
 
 getPosition :: StateT Board IO (Position, Piece)
 getPosition = do
-  b <- gets board
-  h <- gets height
-  w <- gets width
+  Board {..} <- get
   piece <- getPiece
   pos <- liftIO $ fix $ \loop -> do
     putStrLn $ "Got: " ++ show piece
     putStrLn $ "Please enter a position between from\
-     \ (1,1) to " ++ show (h,h) ++ " (i.e. (1,2)) to place it on the board"
+     \ (1,1) to " ++ show (height, height) ++ " (i.e. (1,2)) to place it on the board"
     line <- getLine
     case readMaybe line :: Maybe (Int, Int) of
       Nothing -> do
         putStrLn "Parse error, please try again"
         loop
       Just (x,y) ->
-        if x > w || y > h || x < 1 || y < 1
+        if x > width || y > height || x < 1 || y < 1
           then do
             putStrLn "Out of range, please try again"
             loop
           else
-            case M.lookup (x,y) b of
+            case M.lookup (x,y) board of
               Nothing -> pure (x,y)
               Just _ -> do
                 putStrLn "Position already taken"
@@ -177,7 +186,11 @@ insertIntoBoard position piece = do
     board = M.insert position piece (board b)
   }
 
-reduceBoard :: Monad m => Position -> Piece -> StateT Board m ()
+reduceBoard
+  :: MonadState Board m
+  => Position
+  -> Piece
+  -> m ()
 reduceBoard position piece = do
   neighbors <- getNeighbors piece position
   wasReduced <- updateBoard position piece neighbors
@@ -208,13 +221,12 @@ deleteAll [] b = b
 deleteAll (x:xs) Board {..} =
   deleteAll xs $ Board { board = M.delete x board, .. }
 
--- | Reduces board
 updateBoard
-  :: Monad m
+  :: MonadState Board m
   => Position
   -> Piece
   -> [Position]
-  -> StateT Board m (Maybe Piece)
+  -> m (Maybe Piece)
 updateBoard position piece positionsToRemove = do
   reductionCount <- gets reduceAt
   newBoard <- deleteAll positionsToRemove <$> get
@@ -232,18 +244,6 @@ isFull :: Board -> Bool
 isFull Board {..} =
   height * width == M.size board
 
-createBoard :: IO Board
-createBoard = do
-  putStrLn "Please enter height and width of board (i.e. (10,10))"
-  line <- getLine
-  case readMaybe line :: Maybe (Int, Int) of
-    Nothing -> do
-      putStrLn "Invalid parse try again"
-      createBoard
-    Just result ->
-      case result of
-        (x,y)
-          | x < 0 || y < 0 ->
-              putStrLn "Invalid board size" >> createBoard
-          | otherwise -> pure (newBoard x y)
+createBoard :: Monad m => m Board
+createBoard = pure defaultBoard
 
