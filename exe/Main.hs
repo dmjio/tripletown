@@ -1,10 +1,12 @@
 module Main where
 
-import           TripleTown
+import Control.Monad (when)
+import TripleTown
 
 main :: IO ()
 main = do
   putStrLn "Welcome to Triple Town Console!"
   board <- createBoard
   showBoard board
-  runGame board
+  playAgain <- runGame board
+  when playAgain main
