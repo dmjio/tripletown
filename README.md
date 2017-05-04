@@ -12,3 +12,8 @@ Please enter a position between (1,1) to (5,5) (i.e. (1,2)) to place piece on bo
 -----
 ...
 ```
+
+To play quickly
+```bash
+git clone https://github.com/dmjio/tripletown && cd tripletown && nix-build && result/bin/main
+```
