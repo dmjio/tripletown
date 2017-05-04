@@ -19,4 +19,4 @@ git clone https://github.com/dmjio/tripletown && cd tripletown && nix-build && r
 ```
 
 Simulated gameplay
-[![asciicast](https://asciinema.org/a/0gl3q81yqexsr243dhi4mx38s.png)](https://asciinema.org/a/0gl3q81yqexsr243dhi4mx38s)
+[![asciicast](https://asciinema.org/a/9jcz7edcd8zlm7a6n33kfmi8h.png)](https://asciinema.org/a/9jcz7edcd8zlm7a6n33kfmi8h)
