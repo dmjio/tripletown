@@ -17,3 +17,6 @@ To play quickly
 ```bash
 git clone https://github.com/dmjio/tripletown && cd tripletown && nix-build && result/bin/main
 ```
+
+Simulated gameplay
+[![asciicast](https://asciinema.org/a/0gl3q81yqexsr243dhi4mx38s.png)](https://asciinema.org/a/0gl3q81yqexsr243dhi4mx38s)
