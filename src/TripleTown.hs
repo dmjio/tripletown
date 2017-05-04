@@ -2,6 +2,7 @@
 {-# LANGUAGE RecordWildCards  #-}
 module TripleTown where
 
+import           Control.Concurrent
 import           Control.Monad
 import           Control.Monad.State
 import           Data.Char
@@ -144,14 +145,28 @@ withPieces Board{..} positions =
       map (flip M.lookup board) $ positions
   ]
 
+getPositionSim :: StateT Board IO (Position, Piece)
+getPositionSim = do
+  Board {..} <- get
+  piece <- liftIO getPiece
+  (x,y) <- liftIO $ fix $ \loop -> do
+    (x,y) <- (,) <$> randomRIO (1,6) <*> randomRIO (1,6)
+    case M.lookup (x,y) board of
+      Nothing -> do
+        threadDelay (1000 * 1000)
+        putStrLn "======"
+        pure ((x,y), piece)
+      Just _  -> loop
+  pure (x,y)
+
 getPosition :: StateT Board IO (Position, Piece)
 getPosition = do
   Board {..} <- get
-  piece <- getPiece
+  piece <- liftIO getPiece
   pos <- liftIO $ fix $ \loop -> do
     putStrLn $ "Got: " ++ show piece
     putStrLn $ "Please enter a position between from\
-     \ (1,1) to " ++ show (height, height) ++ " (i.e. (1,2)) to place it on the board"
+      \ (1,1) to " ++ show (height, height) ++ " (i.e. (1,2)) to place it on the board"
     line <- getLine
     case readMaybe line :: Maybe (Int, Int) of
       Nothing -> do
@@ -195,7 +210,7 @@ reduceBoard position piece = do
 runGame :: Board -> IO ()
 runGame board = flip evalStateT board $ do
   fix $ \loop -> do
-    (position, piece) <- getPosition
+    (position, piece) <- getPositionSim
     insertIntoBoard position piece
     reduceBoard position piece
     board <- get
