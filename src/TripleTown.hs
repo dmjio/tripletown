@@ -217,7 +217,7 @@ upgradePiece House = House
 deleteAll :: [Position] -> Board -> Board
 deleteAll [] b = b
 deleteAll (x:xs) Board {..} =
-  deleteAll xs $ Board { board = M.delete x board, .. }
+  deleteAll xs Board { board = M.delete x board, .. }
 
 updateBoard
   :: MonadState Board m
